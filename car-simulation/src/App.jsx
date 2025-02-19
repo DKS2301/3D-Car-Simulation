@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useState } from 'react';
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import CannonDebugger from 'cannon-es-debugger';
@@ -8,7 +9,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import './App.css';
 function App() {
   let speed = 0;
-  let isEngineOn = false;
+  let isEngineOn=false;
+  let headlights = [];
   useEffect(() => {
     const test = new SceneInit('myThreeJsCanvas');
     test.initialize();
@@ -24,6 +26,8 @@ function App() {
     physicsWorld.addBody(groundBody);
     const textureLoader = new THREE.TextureLoader();
     const rockyTexture = textureLoader.load('/textures/rocky_ground.jpg');
+
+    test.renderer.toneMappingExposure = 0.5; // Reduce scene brightness
 
     rockyTexture.wrapS = THREE.RepeatWrapping;
     rockyTexture.wrapT = THREE.RepeatWrapping;
@@ -43,6 +47,7 @@ function App() {
     const hdrLoader = new RGBELoader();
     hdrLoader.load('sky/sky.hdr', (texture) => {
       texture.mapping = THREE.EquirectangularReflectionMapping;
+      test.scene.environmentIntensity = 0.2; // Reduce HDR brightness
       test.scene.environment = texture;  
       test.scene.background = texture;  
     });
@@ -60,14 +65,6 @@ function App() {
       }),
     });
     physicsWorld.addBody(vehicle.chassisBody);
-
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(10, 20, 10);
-    test.scene.add(light);
-
-    test.scene.add(new THREE.AmbientLight(0x404040));
-
-    // Three.js Mesh for the Car Chassis
     var chassisModel=null
     const loader = new GLTFLoader();
     loader.load('/car-body/cybertruck.glb', (gltf) => {
@@ -84,7 +81,24 @@ function App() {
         }
       });
     
-      test.scene.add(chassisModel); // Now it is added only after it's loaded
+      test.scene.add(chassisModel);
+
+      const createHeadlight = (x, y, z) => {
+        const light = new THREE.SpotLight(0xffffff, 0, 20, Math.PI / 6, 0.3, 0.5);
+        light.position.set(x, y, z);
+        light.castShadow = true;
+        const lightTarget = new THREE.Object3D();
+        lightTarget.position.set(x, y - 1, z + 15);
+        light.target = lightTarget;
+        chassisModel.add(light);  // Attach to chassis
+        chassisModel.add(lightTarget); 
+        return light;
+      };
+
+      headlights = [
+        createHeadlight(1.0, 0.5, 0.8), // Right headlight
+        createHeadlight(-1.0, 0.5, 0.8) // Left headlight
+      ];
     });
     
     
@@ -136,18 +150,20 @@ let accelerationForce = 0;
 let vibrationTime=0;
 document.addEventListener('keydown', (event) => {
   switch (event.key) {
-    case 'e': // Toggle engine on/off
+    case 'e': 
       isEngineOn = !isEngineOn;
-      document.getElementById('engine-status').textContent=isEngineOn ? 'ON' : 'OFF';
-      document.getElementById('engine-status').style.color=isEngineOn ? 'green' : 'red';
+      document.getElementById('engine-status').textContent = isEngineOn ? 'ON' : 'OFF';
+      document.getElementById('engine-status').style.color = isEngineOn ? 'green' : 'red';
+
       if (isEngineOn) {
         console.log("Engine started!");
+        headlights.forEach(light => (light.intensity = 20));
         vehicle.chassisBody.applyForce(new CANNON.Vec3(150, 0, 0), vehicle.chassisBody.position);
-        vehicle.chassisBody.velocity.set(0, 0, 0); // Reset movement
+        vehicle.chassisBody.velocity.set(0, 0, 0);
       } 
       else {
         console.log("Engine stopped!");
-        accelerationForce = 0;
+        headlights.forEach(light => (light.intensity = 0));
         vehicle.setWheelForce(0, 2);
         vehicle.setWheelForce(0, 3);
       }
@@ -222,7 +238,7 @@ const animate = () => {
   }
   //Engine vibration
   if (isEngineOn) {
-    vibrationTime += 0.1;
+    vibrationTime += 0.03;
 
     const vibrationStrength = 0.015 ; 
     const shakeY = Math.sin(vibrationTime * 10) * vibrationStrength; 
@@ -231,7 +247,6 @@ const animate = () => {
     chassisModel.position.y += shakeY; 
     chassisModel.position.x += shakeX; 
 
-    // Small rotation shake
     chassisModel.rotation.z += Math.sin(vibrationTime * 12) * 0.002;
   }
   const velocity = vehicle.chassisBody.velocity;
@@ -244,7 +259,7 @@ const animate = () => {
 
 animate();
 
-  }, []);
+  }, [isEngineOn]);
 
   return (
   <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>

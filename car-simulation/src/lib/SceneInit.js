@@ -46,12 +46,11 @@ export default class SceneInit {
     document.body.appendChild(this.stats.dom);
 
     // ambient light which is for the whole scene
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    this.ambientLight.castShadow = true;
+    this.ambientLight = new THREE.AmbientLight(0x0a0a32, 0.2); 
     this.scene.add(this.ambientLight);
-
-    // directional light - parallel sun rays
-    this.directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    
+    // Directional light (moonlight effect, dimmer)
+    this.directionalLight = new THREE.DirectionalLight(0xaaaaee, 0.3); 
     this.directionalLight.position.set(0, 32, 64);
     this.scene.add(this.directionalLight);
 
