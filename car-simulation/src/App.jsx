@@ -4,6 +4,7 @@ import * as CANNON from 'cannon-es';
 import CannonDebugger from 'cannon-es-debugger';
 import SceneInit from './lib/SceneInit';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 
 function App() {
@@ -40,7 +41,7 @@ function App() {
 
     // Set the sky
     const hdrLoader = new RGBELoader();
-    hdrLoader.load('textures/sky.hdr', (texture) => {
+    hdrLoader.load('sky/sky.hdr', (texture) => {
       texture.mapping = THREE.EquirectangularReflectionMapping;
       test.scene.environment = texture;  
       test.scene.background = texture;  
@@ -50,7 +51,7 @@ function App() {
 
 
     const cannonDebugger = new CannonDebugger(test.scene, physicsWorld, {
-      color: 0x000000, 
+      color: 0x00000  , 
     });
 
     // Car setup
@@ -71,82 +72,36 @@ function App() {
     test.scene.add(new THREE.AmbientLight(0x404040));
 
     // Three.js Mesh for the Car Chassis
-    const chassisMesh = new THREE.Group(); // Grouping parts of the car
-
-    // Main Body (Elongated Box)
-    const mainBody = new THREE.Mesh(
-      new THREE.BoxGeometry(3.5, 3, 8), 
-      new THREE.MeshStandardMaterial({ color: 0xff0000 })
-    );
-    mainBody.position.set(0, 0.5, 0);
-    chassisMesh.add(mainBody);
-
-
-    // Front Bumper
-    const frontBumper = new THREE.Mesh(
-      new THREE.BoxGeometry(3.0, 0.4, 1),
-      new THREE.MeshStandardMaterial({ color: 0x333333 })
-    );
-    frontBumper.position.set(0, -0.3, 4.0);
-    frontBumper.rotation.x = -Math.PI / 2;
-    chassisMesh.add(frontBumper);
-
-    // Rear Bumper
-    const rearBumper = new THREE.Mesh(
-      new THREE.BoxGeometry(3.7, 0.1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x333333 })
-    );
-    rearBumper.rotation.x = -Math.PI / 2;
-    rearBumper.position.set(0, -0.5, -4.0);
-    chassisMesh.add(rearBumper);
-
-    // Windshield
-    const windshield = new THREE.Mesh(
-      new THREE.BoxGeometry(3.0, 0.4, 1.3),
-      new THREE.MeshStandardMaterial({ color: 0x555555, transparent: true, opacity: 0.8 }) // Glass effect
-    );
-    windshield.position.set(0, 1.2, 3.95);
-    windshield.rotation.x = -Math.PI / 2;
-    chassisMesh.add(windshield);
-
-    // Rear Window
-    const rearWindow = windshield.clone();
-    rearWindow.position.set(0, 1.2, -3.9);
-    chassisMesh.add(rearWindow);
-
-    // Headlights
-    const headlightMaterial = new THREE.MeshStandardMaterial({ color: 0xffffaa, emissive: 0xffffaa });
-    const headlight1 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), headlightMaterial);
-    headlight1.position.set(1, -0.3, 3.8);
-    chassisMesh.add(headlight1);
-    const headlight2 = headlight1.clone();
-    headlight2.position.set(-1, -0.3, 3.8);
-    chassisMesh.add(headlight2);
-
-    // Taillights
-    const taillightMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000 });
-    const taillight1 = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), taillightMaterial);
-    taillight1.position.set(1.4, -0.6, -3.8);
-    chassisMesh.add(taillight1);
-    const taillight2 = taillight1.clone();
-    taillight2.position.set(-1.4, -0.6, -3.8);
-    chassisMesh.add(taillight2);
-
-    // Add to scene
-    chassisMesh.name = 'chassis';
-    test.scene.add(chassisMesh);
-
+    var chassisModel=null
+    const loader = new GLTFLoader();
+    loader.load('/car-body/cybertruck.glb', (gltf) => {
+      chassisModel = gltf.scene;
+      console.log("model loaded");
+    
+      chassisModel.scale.set(3.5, 3.5, 3.5); 
+      chassisModel.position.set(0, 0, 0);
+    
+      chassisModel.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+    
+      test.scene.add(chassisModel); // Now it is added only after it's loaded
+    });
+    
+    
     
     // Wheel setup
-    const wheelRadius = 1;
+    const wheelRadius = 0.9;
     const wheelShape = new CANNON.Cylinder(wheelRadius, wheelRadius, 0.5, 80);
     const wheelMaterial = new CANNON.Material('wheel');
     const down = new CANNON.Vec3(0, -1, 0);
     const wheelQuaternion = new CANNON.Quaternion();
     wheelQuaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.PI / 2);
 
-    // Store wheel meshes for updates
-    const wheelMeshes = [];
+
 
     function createWheel(position, isSteeringWheel = false) {
       // Create the physics wheel
@@ -171,10 +126,10 @@ function App() {
     }
 
 // Create Wheels
-createWheel(new CANNON.Vec3(-2, -0.5, 2.5), true);
-createWheel(new CANNON.Vec3(2, -0.5, 2.5), true);
-createWheel(new CANNON.Vec3(-2, -0.5, -2.5));
-createWheel(new CANNON.Vec3(2, -0.5, -2.5));
+createWheel(new CANNON.Vec3(-2, -1, 4.1), true); //Front Right
+createWheel(new CANNON.Vec3(2, -1, 4.1), true); //Front Left
+createWheel(new CANNON.Vec3(-2, -1, -3.9)); //Back Right
+createWheel(new CANNON.Vec3(2, -1, -3.9)); //Back Left
 
 vehicle.addToWorld(physicsWorld);
 
@@ -228,12 +183,12 @@ const animate = () => {
   physicsWorld.fixedStep();
   cannonDebugger.update();
 
-  // Sync chassis
-  chassisMesh.position.copy(vehicle.chassisBody.position);
-  chassisMesh.quaternion.copy(vehicle.chassisBody.quaternion);
+  if (chassisModel) {
+    chassisModel.position.copy(vehicle.chassisBody.position);
+    chassisModel.quaternion.copy(vehicle.chassisBody.quaternion);
+  }
 
   window.requestAnimationFrame(animate);
-  updateCamera()
 };
 
 animate();
