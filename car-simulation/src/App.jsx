@@ -173,20 +173,16 @@ document.addEventListener('keydown', (event) => {
 
     case 'a':
     case 'ArrowLeft':
-      if (isEngineOn) {
-        steeringAngle = Math.min(0.5, steeringAngle + 0.05);
-        vehicle.setSteeringValue(steeringAngle, 0);
-        vehicle.setSteeringValue(steeringAngle, 1);
-      }
+      steeringAngle = Math.min(0.5, steeringAngle + 0.05);
+      vehicle.setSteeringValue(steeringAngle, 0);
+      vehicle.setSteeringValue(steeringAngle, 1);
       break;
 
     case 'd':
     case 'ArrowRight':
-      if (isEngineOn) {
-        steeringAngle = Math.max(-0.5, steeringAngle - 0.05);
-        vehicle.setSteeringValue(steeringAngle, 0);
-        vehicle.setSteeringValue(steeringAngle, 1);
-      }
+      steeringAngle = Math.max(-0.5, steeringAngle - 0.05);
+      vehicle.setSteeringValue(steeringAngle, 0);
+      vehicle.setSteeringValue(steeringAngle, 1);
       break;
 
     case ' ':
@@ -198,10 +194,8 @@ document.addEventListener('keydown', (event) => {
       vehicle.setWheelForce(0, 2); // Rear-left wheel
       vehicle.setWheelForce(0, 3); // Rear-right wheel
       
-      // Reduce chassis velocity gradually
-      const brakeDamping = 0.001; // Adjust for stronger braking
+      const brakeDamping = 0.0001; 
       vehicle.chassisBody.velocity.scale(brakeDamping);
-
       break;
       
   }
@@ -212,6 +206,8 @@ document.addEventListener('keyup', (event) => {
     accelerationForce = 0;
     vehicle.setWheelForce(0, 2);
     vehicle.setWheelForce(0, 3);
+    vehicle.setSteeringValue(0, 0);
+    vehicle.setSteeringValue(0, 1);
   }
 });
 
@@ -224,17 +220,16 @@ const animate = () => {
     chassisModel.position.copy(vehicle.chassisBody.position);
     chassisModel.quaternion.copy(vehicle.chassisBody.quaternion);
   }
+  //Engine vibration
   if (isEngineOn) {
-    // Increase vibration time
     vibrationTime += 0.1;
 
-    // Apply a small sinusoidal movement for vibration
-    const vibrationStrength = 0.01 ; // Adjust for more noticeable vibration
+    const vibrationStrength = 0.015 ; 
     const shakeY = Math.sin(vibrationTime * 10) * vibrationStrength; 
-    const shakeX = Math.sin(vibrationTime * 8) * (vibrationStrength / 2); // Slight sideways movement
+    const shakeX = Math.sin(vibrationTime * 8) * (vibrationStrength / 2); 
 
-    chassisModel.position.y += shakeY; // Vertical shake
-    chassisModel.position.x += shakeX; // Sideways shake
+    chassisModel.position.y += shakeY; 
+    chassisModel.position.x += shakeX; 
 
     // Small rotation shake
     chassisModel.rotation.z += Math.sin(vibrationTime * 12) * 0.002;
