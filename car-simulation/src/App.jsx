@@ -274,12 +274,10 @@ animate();
       <h2>CONTROLS</h2>
       <p><b>Engine:</b> <span id="engine-status">OFF
       </span></p>
-      <ul>
-        <li><b>E</b> - Toggle Engine</li>
-        <li><b>W / S</b> - Forward / Reverse</li>
-        <li><b>A / D</b> - Turn Left / Right</li>
-        <li><b>Space</b> - Brake</li>
-      </ul>
+        <p><b>E</b> - Toggle Engine</p>
+        <p><b>W / S</b> - Forward / Reverse</p>
+        <p><b>A / D</b> - Turn Left / Right</p>
+        <p><b>Space</b> - Brake</p>
     </div>
   </div>
 );

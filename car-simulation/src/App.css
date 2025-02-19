@@ -24,22 +24,6 @@ canvas {
   z-index: 10; 
 }
 
-/* Engine Status Box */
-#Engine {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: lightgray;
-  color: black;
-  padding: 10px 15px;
-  font-size: 20px;
-  border-radius: 10px;
-  font-weight: bold;
-  font-family: sans-serif;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
-  z-index: 10;
-}
-
 /* Control Sidebar */
 #control-sidebar {
   position: absolute;
@@ -60,12 +44,6 @@ canvas {
 #control-sidebar, #speedometer {
   pointer-events: none; 
 }
-
-#control-sidebar li {
-  list-style: none;
-  font-family: 'Orbitron', sans-serif;
-}
-
 
 /* Ensure engine status text has smooth color transition */
 #engine-status {
