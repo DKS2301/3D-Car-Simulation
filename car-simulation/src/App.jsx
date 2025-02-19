@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { useState } from 'react';
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import CannonDebugger from 'cannon-es-debugger';
@@ -124,9 +123,9 @@ function App() {
         position,
         axis: new CANNON.Vec3(1, 0, 0),
         direction: down,
-        suspensionStiffness: 50,
-        suspensionRestLength: 0.2,
-        frictionSlip: 5,
+        suspensionStiffness: 150,
+        suspensionRestLength: 0.8,
+        frictionSlip: 2,
         dampingRelaxation: 2.3,
         dampingCompression: 4.4,
         maxSuspensionForce: 10000,
@@ -238,9 +237,9 @@ const animate = () => {
   }
   //Engine vibration
   if (isEngineOn) {
-    vibrationTime += 0.03;
+    vibrationTime += 0.025;
 
-    const vibrationStrength = 0.015 ; 
+    const vibrationStrength = 0.02 ; 
     const shakeY = Math.sin(vibrationTime * 10) * vibrationStrength; 
     const shakeX = Math.sin(vibrationTime * 8) * (vibrationStrength / 2); 
 
@@ -250,9 +249,8 @@ const animate = () => {
     chassisModel.rotation.z += Math.sin(vibrationTime * 12) * 0.002;
   }
   const velocity = vehicle.chassisBody.velocity;
-  speed = Math.sqrt(velocity.x ** 2 + velocity.z ** 2) * 3.6; // Convert to km/h
+  speed = Math.sqrt(velocity.x ** 2 + velocity.z ** 2) * 3.6;
   document.getElementById('speedometer').textContent = `Speed: ${speed.toFixed(2)} km/h`;
-  // Update Speedometer Display
 
   window.requestAnimationFrame(animate);
 };
