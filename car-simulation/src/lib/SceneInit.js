@@ -12,7 +12,7 @@ export default class SceneInit {
     this.nearPlane = 1;
     this.farPlane = 1000;
     this.canvasId = canvasId;
-
+    this.carModel = null;
     this.clock = undefined;
     this.stats = undefined;
     this.controls = undefined;
@@ -63,6 +63,18 @@ export default class SceneInit {
   //animating
   animate() {
     window.requestAnimationFrame(this.animate.bind(this));
+    if (this.carModel) {
+      const offset = new THREE.Vector3(0, 5, -10); // Adjust offset (height, distance)
+      const carPosition = this.carModel.position.clone();
+      const cameraTarget = this.carModel.position.clone();
+  
+      // Move the camera relative to the car
+      const newCameraPosition = carPosition.add(offset.applyQuaternion(this.carModel.quaternion));
+      this.camera.position.lerp(newCameraPosition, 0.1); // Smooth transition
+  
+      // Make the camera look at the car
+      this.camera.lookAt(cameraTarget);
+    }
     this.render();
     this.stats.update();
     this.controls.update();
