@@ -7,6 +7,7 @@ export default class SceneInit {
     this.scene = undefined;
     this.camera = undefined;
     this.renderer = undefined;
+    this.freecamera=true;
 
     this.fov = 45;
     this.nearPlane = 1;
@@ -63,16 +64,30 @@ export default class SceneInit {
   animate() {
     window.requestAnimationFrame(this.animate.bind(this));
     if (this.carModel) {
-      const offset = new THREE.Vector3(0, 5, -10); // Adjust offset (height, distance)
+      
+      const initialCameraOffset = new THREE.Vector3(-10, 10, -20); // (Height, distance behind)
       const carPosition = this.carModel.position.clone();
-      const cameraTarget = this.carModel.position.clone();
-  
-      // Move the camera relative to the car
-      const newCameraPosition = carPosition.add(offset.applyQuaternion(this.carModel.quaternion));
-      this.camera.position.lerp(newCameraPosition, 0.1); // Smooth transition
-  
-      // Make the camera look at the car
-      this.camera.lookAt(cameraTarget);
+
+      let currentOffset = this.camera.position.clone().sub(carPosition);
+      let newCameraPosition = carPosition.clone();
+      
+      newCameraPosition.x += currentOffset.x; // Keep X from OrbitControls
+      newCameraPosition.y += currentOffset.y; // Keep Y from OrbitControls
+      newCameraPosition.z += initialCameraOffset.z; 
+      this.camera.position.lerp(newCameraPosition, 0.01);
+
+      // Make the camera look slightly ahead of the car
+      const lookAheadOffset = new THREE.Vector3(0, 2, 5); // Look slightly ahead
+      const lookAtTarget = carPosition.clone().add(
+          lookAheadOffset.applyQuaternion(this.carModel.quaternion)
+      );
+      this.camera.lookAt(lookAtTarget);
+
+      // Prevent camera from going too far or too close
+      if (isNaN(this.camera.position.x) || isNaN(this.camera.position.y) || isNaN(this.camera.position.z)) {
+          console.warn("Invalid camera position detected! Resetting...");
+          this.camera.position.set(carPosition.x, carPosition.y + 5, carPosition.z + 10); // Reset position
+      }
     }
     this.render();
     this.stats.update();

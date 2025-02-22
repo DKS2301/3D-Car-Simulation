@@ -6,6 +6,7 @@ import SceneInit from './lib/SceneInit';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import './App.css';
+import SpeedometerDisplay from './Speedometer';
 function App() {
   let speed = 0;
   let isEngineOn=false;
@@ -58,7 +59,7 @@ function App() {
     // Car setup
     const vehicle = new CANNON.RigidVehicle({
       chassisBody: new CANNON.Body({
-        mass: 150,
+        mass: 100,
         position: new CANNON.Vec3(0, 6, 0),
         shape: new CANNON.Box(new CANNON.Vec3(1.75, 0.5, 4)),
       }),
@@ -69,19 +70,20 @@ function App() {
     loader.load('/car-body/cybertruck.glb', (gltf) => {
       chassisModel = gltf.scene;
       console.log("model loaded");
-    
+      
       chassisModel.scale.set(3.5, 3.5, 3.5); 
       chassisModel.position.set(0, 0, 0);
-    
+      
       chassisModel.traverse((child) => {
         if (child.isMesh) {
           child.castShadow = true;
           child.receiveShadow = true;
         }
       });
-    
+      
       test.scene.add(chassisModel);
-
+      test.carModel=chassisModel;
+      
       const createHeadlight = (x, y, z) => {
         const light = new THREE.SpotLight(0xffffff, 0, 20, Math.PI / 6, 0.3, 0.5);
         light.position.set(x, y, z);
@@ -99,7 +101,6 @@ function App() {
         createHeadlight(-1.0, 0.5, 0.8) // Left headlight
       ];
     });
-    
     
     
     // Wheel setup
@@ -147,6 +148,7 @@ vehicle.addToWorld(physicsWorld);
 let steeringAngle = 0;
 let accelerationForce = 0;
 let vibrationTime=0;
+let turboActive=false;
 document.addEventListener('keydown', (event) => {
   switch (event.key) {
     case 'e': 
@@ -167,21 +169,25 @@ document.addEventListener('keydown', (event) => {
         vehicle.setWheelForce(0, 3);
       }
       break;
-
-    case 'w':
-    case 'ArrowUp':
-      if (isEngineOn) {
-        accelerationForce = 300;
-        vehicle.setWheelForce(accelerationForce, 2);
-        vehicle.setWheelForce(accelerationForce, 3);
-      }
+      
+      case 'w':
+        case 'ArrowUp':
+          if (isEngineOn) {
+            vehicle.chassisBody.linearDamping = 0.3;
+            accelerationForce = 400;
+            vehicle.setWheelForce(accelerationForce, 2);
+          vehicle.setWheelForce(accelerationForce, 3);
+          jerkEffect = turboActive ? 800 : 200; // Extra push when turbo is on
+          vehicle.chassisBody.applyImpulse(new CANNON.Vec3(jerkEffect, 0, 0), vehicle.chassisBody.position);
+        }
       break;
-
-    case 's':
-    case 'ArrowDown':
-      if (isEngineOn) {
-        accelerationForce = -150;
-        vehicle.setWheelForce(accelerationForce, 2);
+      
+      case 's':
+        case 'ArrowDown':
+          if (isEngineOn) {
+            vehicle.chassisBody.linearDamping = 0.3;
+            accelerationForce = -300;
+            vehicle.setWheelForce(accelerationForce, 2);
         vehicle.setWheelForce(accelerationForce, 3);
       }
       break;
@@ -202,15 +208,50 @@ document.addEventListener('keydown', (event) => {
 
     case ' ':
       console.log("Brakes applied!");
-
-      // Reduce wheel forces to smoothly stop the car
       vehicle.setWheelForce(0, 0); // Front-left wheel
       vehicle.setWheelForce(0, 1); // Front-right wheel
       vehicle.setWheelForce(0, 2); // Rear-left wheel
       vehicle.setWheelForce(0, 3); // Rear-right wheel
+
+      const weightFactor = 1.5; 
+      const maxTilt = 8; 
+      const maxSkidForce = 100; 
       
-      const brakeDamping = 0.0001; 
-      vehicle.chassisBody.velocity.scale(brakeDamping);
+      const brakeFactor = Math.max(0.7, 1 - speed * 0.02); 
+      const tiltFactor = Math.min(speed * 0.08 * weightFactor, maxTilt); 
+      
+      const skidFactor = speed > 40 ? (Math.random() * 0.2 - 0.1) * (speed / 100) : 0;
+      
+      vehicle.chassisBody.applyImpulse(
+          new CANNON.Vec3(0, tiltFactor * 12, -tiltFactor * 3), 
+          vehicle.chassisBody.position
+      );
+      
+      if (speed > 30 && Math.abs(vehicle.chassisBody.velocity.x) > 2) {
+          vehicle.chassisBody.applyImpulse(
+              new CANNON.Vec3(skidFactor * maxSkidForce, 0, skidFactor * maxSkidForce),
+              vehicle.chassisBody.position
+          );
+      }
+      
+      vehicle.chassisBody.velocity.x *= brakeFactor;  
+      vehicle.chassisBody.velocity.z *= brakeFactor;
+      
+      vehicle.chassisBody.angularVelocity.set(tiltFactor * 0.6, 0, 0); 
+      
+      vehicle.chassisBody.linearDamping = Math.min(0.99, 0.8 + speed * 0.005);  
+      
+      break;
+
+    case 'Shift': // TURBO MODE
+      turboActive = true;
+      console.log(" TURBO ACTIVATED!");
+      headlights.forEach(light => (light.intensity = 50)); // Brighter headlights for effect
+      setTimeout(() => {
+          turboActive = false;
+          console.log(" Turbo Deactivated!");
+          headlights.forEach(light => (light.intensity = 20));
+      }, 3000); // Turbo lasts for 3 seconds
       break;
       
   }
@@ -237,9 +278,9 @@ const animate = () => {
   }
   //Engine vibration
   if (isEngineOn) {
-    vibrationTime += 0.025;
+    vibrationTime += 0.02;
 
-    const vibrationStrength = 0.02 ; 
+    const vibrationStrength = 0.0015 ; 
     const shakeY = Math.sin(vibrationTime * 10) * vibrationStrength; 
     const shakeX = Math.sin(vibrationTime * 8) * (vibrationStrength / 2); 
 
@@ -266,9 +307,9 @@ animate();
 
     {/* Speedometer Display */}
     <div id="speedometer">
-      Speed: 0 km/h
+    <SpeedometerDisplay speed={speed}/>
     </div>
-
+    
     {/* Control Sidebar */}
     <div id="control-sidebar">
       <h2>CONTROLS</h2>
