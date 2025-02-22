@@ -11,6 +11,8 @@ function App() {
   let speed = 0;
   let isEngineOn=false;
   let headlights = [];
+  let maxTilt = 8; 
+
   useEffect(() => {
     const test = new SceneInit('myThreeJsCanvas');
     test.initialize();
@@ -33,7 +35,7 @@ function App() {
     rockyTexture.wrapT = THREE.RepeatWrapping;
     rockyTexture.repeat.set(50, 50); 
 
-    //Set teh ground texture
+    //Set the ground texture
     const groundMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(500, 500),
       new THREE.MeshStandardMaterial({
@@ -47,14 +49,11 @@ function App() {
     const hdrLoader = new RGBELoader();
     hdrLoader.load('sky/sky.hdr', (texture) => {
       texture.mapping = THREE.EquirectangularReflectionMapping;
-      test.scene.environmentIntensity = 0.2; // Reduce HDR brightness
+      test.scene.environmentIntensity = 0.2; 
       test.scene.environment = texture;  
       test.scene.background = texture;  
     });
 
-    const cannonDebugger = new CannonDebugger(test.scene, physicsWorld, {
-      color: 0x0c0c0c  , 
-    });
 
     // Car setup
     const vehicle = new CANNON.RigidVehicle({
@@ -91,7 +90,7 @@ function App() {
         const lightTarget = new THREE.Object3D();
         lightTarget.position.set(x, y - 1, z + 15);
         light.target = lightTarget;
-        chassisModel.add(light);  // Attach to chassis
+        chassisModel.add(light);  
         chassisModel.add(lightTarget); 
         return light;
       };
@@ -105,20 +104,20 @@ function App() {
     
     // Wheel setup
     const wheelRadius = 0.9;
-    const wheelShape = new CANNON.Cylinder(wheelRadius, wheelRadius, 0.5, 80);
+    const wheelShape = new CANNON.Cylinder(wheelRadius, wheelRadius, 0.5, 20);
     const wheelMaterial = new CANNON.Material('wheel');
     const down = new CANNON.Vec3(0, -1, 0);
     const wheelQuaternion = new CANNON.Quaternion();
     wheelQuaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.PI / 2);
 
 
-
+    const wheelModels = [];
+    const wheelBodies = []; // Store physics wheel bodies
     function createWheel(position, isSteeringWheel = false) {
-      // Create the physics wheel
       const wheelBody = new CANNON.Body({ mass: 5, material: wheelMaterial });
       wheelBody.addShape(wheelShape, new CANNON.Vec3(0, 0, 0), wheelQuaternion);
       wheelBody.angularDamping = 0.9;
-
+    
       vehicle.addWheel({
         body: wheelBody,
         position,
@@ -132,15 +131,37 @@ function App() {
         maxSuspensionForce: 10000,
         isFrontWheel: isSteeringWheel,
       });
+      wheelBodies.push(wheelBody);
 
+      loader.load('/car-body/wheel.gltf', (gltf) => {
+        const wheelModel = gltf.scene;
+        console.log("Wheel loaded at:", position);
+    
+        wheelModel.scale.set(4, 4, 4);
+        wheelModel.position.copy(position);
+
+        //Mirror wheels on the right side
+        if (position.x < 0) {
+          wheelModel.scale.x *= -1;
+        }
+        wheelModel.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+    
+        test.scene.add(wheelModel);
+        wheelModels.push({ model: wheelModel, body: wheelBody });
+      });
     }
+    
 
 // Create Wheels
 createWheel(new CANNON.Vec3(-2, -1, 4.1), true); //Front Right
 createWheel(new CANNON.Vec3(2, -1, 4.1), true); //Front Left
 createWheel(new CANNON.Vec3(-2, -1, -3.9)); //Back Right
 createWheel(new CANNON.Vec3(2, -1, -3.9)); //Back Left
-
 vehicle.addToWorld(physicsWorld);
 
 // Input Handling
@@ -177,8 +198,6 @@ document.addEventListener('keydown', (event) => {
             accelerationForce = 400;
             vehicle.setWheelForce(accelerationForce, 2);
           vehicle.setWheelForce(accelerationForce, 3);
-          jerkEffect = turboActive ? 800 : 200; // Extra push when turbo is on
-          vehicle.chassisBody.applyImpulse(new CANNON.Vec3(jerkEffect, 0, 0), vehicle.chassisBody.position);
         }
       break;
       
@@ -214,7 +233,6 @@ document.addEventListener('keydown', (event) => {
       vehicle.setWheelForce(0, 3); // Rear-right wheel
 
       const weightFactor = 1.5; 
-      const maxTilt = 8; 
       const maxSkidForce = 100; 
       
       const brakeFactor = Math.max(0.7, 1 - speed * 0.02); 
@@ -246,12 +264,12 @@ document.addEventListener('keydown', (event) => {
     case 'Shift': // TURBO MODE
       turboActive = true;
       console.log(" TURBO ACTIVATED!");
-      headlights.forEach(light => (light.intensity = 50)); // Brighter headlights for effect
+      headlights.forEach(light => (light.intensity = 50)); 
       setTimeout(() => {
           turboActive = false;
           console.log(" Turbo Deactivated!");
           headlights.forEach(light => (light.intensity = 20));
-      }, 3000); // Turbo lasts for 3 seconds
+      }, 6000); 
       break;
       
   }
@@ -270,11 +288,27 @@ document.addEventListener('keyup', (event) => {
 // Animation Loop
 const animate = () => {
   physicsWorld.fixedStep();
-  cannonDebugger.update();
 
   if (chassisModel) {
     chassisModel.position.copy(vehicle.chassisBody.position);
     chassisModel.quaternion.copy(vehicle.chassisBody.quaternion);
+  }
+  if(wheelModels.length>0){
+    for (let i = 0; i < vehicle.wheelBodies.length; i++) {
+      const wheelBody = vehicle.wheelBodies[i];
+      const wheelModel = wheelModels[i].model; 
+  
+      if (wheelModel) {
+        // Sync wheel position
+        wheelModel.position.copy(wheelBody.position);
+        wheelModel.quaternion.copy(wheelBody.quaternion);
+        const wheelSpinSpeed = speed * 0.05; 
+        const spinQuaternion = new THREE.Quaternion();
+        spinQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -wheelSpinSpeed); 
+        wheelModel.quaternion.multiplyQuaternions(wheelModel.quaternion, spinQuaternion);
+        
+      }
+    }
   }
   //Engine vibration
   if (isEngineOn) {
@@ -283,16 +317,17 @@ const animate = () => {
     const vibrationStrength = 0.0015 ; 
     const shakeY = Math.sin(vibrationTime * 10) * vibrationStrength; 
     const shakeX = Math.sin(vibrationTime * 8) * (vibrationStrength / 2); 
-
+    
     chassisModel.position.y += shakeY; 
     chassisModel.position.x += shakeX; 
-
+    
     chassisModel.rotation.z += Math.sin(vibrationTime * 12) * 0.002;
   }
+  
   const velocity = vehicle.chassisBody.velocity;
   speed = Math.sqrt(velocity.x ** 2 + velocity.z ** 2) * 3.6;
   document.getElementById('speedometer').textContent = `Speed: ${speed.toFixed(2)} km/h`;
-
+  
   window.requestAnimationFrame(animate);
 };
 
