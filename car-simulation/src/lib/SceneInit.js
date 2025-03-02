@@ -108,7 +108,7 @@ export default class SceneInit {
     this.bgMusic = new THREE.Audio(listener);
     const audioLoader = new THREE.AudioLoader();
 
-    audioLoader.load('../../sounds/bgmusic.wav', (buffer) => {
+    audioLoader.load('/sounds/bgmusic.wav', (buffer) => {
         this.bgMusic.setBuffer(buffer);
         this.bgMusic.setLoop(true);  // Loop the music
         this.bgMusic.setVolume(0.03); // Set volume
@@ -121,7 +121,7 @@ export default class SceneInit {
     const audioLoader = new THREE.AudioLoader();
 
     this.engineStartSound = new THREE.PositionalAudio(this.audioListener);
-    audioLoader.load('../../sounds/enginestart.wav', (buffer) => {  // Load `.wav` file
+    audioLoader.load('/sounds/enginestart.wav', (buffer) => {  // Load `.wav` file
       this.engineStartSound.setBuffer(buffer);
       this.engineStartSound.setLoop(false); // Loop engine sound
       this.engineStartSound.setVolume(5.0); // Adjust volume
@@ -130,7 +130,7 @@ export default class SceneInit {
     });
 
     this.engineRaceSound = new THREE.PositionalAudio(this.audioListener);
-    audioLoader.load('../../sounds/racing.wav', (buffer) => {  // Load `.wav` file
+    audioLoader.load('/sounds/racing.wav', (buffer) => {  // Load `.wav` file
         this.engineRaceSound.setBuffer(buffer);
         this.engineRaceSound.setLoop(true); // Loop engine sound
         this.engineRaceSound.setVolume(5.0); // Adjust volume
@@ -139,7 +139,7 @@ export default class SceneInit {
     });
 
     this.engineBrakeSound = new THREE.PositionalAudio(this.audioListener);
-    audioLoader.load('../../sounds/braking.mp3', (buffer) => {  // Load `.wav` file
+    audioLoader.load('/sounds/braking.mp3', (buffer) => {  // Load `.wav` file
         this.engineBrakeSound.setBuffer(buffer);
         this.engineBrakeSound.setLoop(false); // Loop engine sound
         this.engineBrakeSound.setVolume(4.5); // Adjust volume
@@ -148,7 +148,7 @@ export default class SceneInit {
     });
     
     this.SkidSound = new THREE.PositionalAudio(this.audioListener);
-    audioLoader.load('../../sounds/skid.wav', (buffer) => {  // Load `.wav` file
+    audioLoader.load('/sounds/skid.wav', (buffer) => {  // Load `.wav` file
         this.SkidSound.setBuffer(buffer);
         this.SkidSound.setLoop(false); // Loop engine sound
         this.SkidSound.setVolume(3.5); // Adjust volume
@@ -161,10 +161,7 @@ export default class SceneInit {
   attachSoundToCar(Sound) {
     if (this.carModel) {
         this.carModel.add(Sound);
-
-        console.log("✅ Engine sound attached to car.");
     } else{  // Keep retrying if not attached yet
-      console.warn("⏳ Waiting for chassisModel to load...");
       setTimeout(() => this.attachSoundToCar(Sound), 500);
     }
   }
