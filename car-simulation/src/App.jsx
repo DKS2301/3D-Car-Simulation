@@ -180,6 +180,9 @@ document.addEventListener('keydown', (event) => {
         if (test.engineStartSound && !test.engineStartSound.isPlaying) {
           test.engineStartSound.play();
         }
+        if(test.bgMusic && !test.bgMusic.isPlaying){
+          test.bgMusic.play();
+        }
       } 
       else {
         headlights.forEach(light => (light.intensity = 0));
