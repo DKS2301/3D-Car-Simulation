@@ -13,6 +13,7 @@ export default class SceneInit {
     this.engineRaceSound = undefined;
     this.engineBrakeSound = undefined;
     this.SkidSound = undefined;
+    this.NitroSound = undefined;
     this.soundAttached = false;
     this.fov = 45;
     this.nearPlane = 1;
@@ -111,8 +112,7 @@ export default class SceneInit {
     audioLoader.load('/sounds/bgmusic.wav', (buffer) => {
         this.bgMusic.setBuffer(buffer);
         this.bgMusic.setLoop(true);  // Loop the music
-        this.bgMusic.setVolume(0.03); // Set volume
-        this.bgMusic.play();
+        this.bgMusic.setVolume(0.1); // Set volume
     });
   }
 
@@ -124,7 +124,7 @@ export default class SceneInit {
     audioLoader.load('/sounds/enginestart.wav', (buffer) => {  // Load `.wav` file
       this.engineStartSound.setBuffer(buffer);
       this.engineStartSound.setLoop(false); // Loop engine sound
-      this.engineStartSound.setVolume(5.0); // Adjust volume
+      this.engineStartSound.setVolume(9.0); // Adjust volume
       
       this.attachSoundToCar(this.engineStartSound);  // Try attaching it to the car
     });
@@ -133,7 +133,7 @@ export default class SceneInit {
     audioLoader.load('/sounds/racing.wav', (buffer) => {  // Load `.wav` file
         this.engineRaceSound.setBuffer(buffer);
         this.engineRaceSound.setLoop(true); // Loop engine sound
-        this.engineRaceSound.setVolume(5.0); // Adjust volume
+        this.engineRaceSound.setVolume(10.0); // Adjust volume
 
         this.attachSoundToCar(this.engineRaceSound);  // Try attaching it to the car
     });
@@ -142,7 +142,7 @@ export default class SceneInit {
     audioLoader.load('/sounds/braking.mp3', (buffer) => {  // Load `.wav` file
         this.engineBrakeSound.setBuffer(buffer);
         this.engineBrakeSound.setLoop(false); // Loop engine sound
-        this.engineBrakeSound.setVolume(4.5); // Adjust volume
+        this.engineBrakeSound.setVolume(8.0); // Adjust volume
 
         this.attachSoundToCar(this.engineBrakeSound);  // Try attaching it to the car
     });
@@ -154,6 +154,15 @@ export default class SceneInit {
         this.SkidSound.setVolume(3.5); // Adjust volume
 
         this.attachSoundToCar(this.SkidSound);  // Try attaching it to the car
+    });
+    
+    this.NitroSound = new THREE.PositionalAudio(this.audioListener);
+    audioLoader.load('/sounds/nitroSoundNitroSound.mp3', (buffer) => { 
+        this.NitroSound.setBuffer(buffer);
+        this.NitroSound.setLoop(false); 
+        this.NitroSound.setVolume(3.5); // Adjust volume
+
+        this.attachSoundToCar(this.NitroSound);  
     });
 
   }

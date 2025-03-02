@@ -232,11 +232,7 @@ document.addEventListener('keydown', (event) => {
       break;
 
     case ' ':
-      vehicle.setWheelForce(0, 0); // Front-left wheel
-      vehicle.setWheelForce(0, 1); // Front-right wheel
-      vehicle.setWheelForce(0, 2); // Rear-left wheel
-      vehicle.setWheelForce(0, 3); // Rear-right wheel
-
+      
       const weightFactor = 1.5; 
       const maxSkidForce = 100; 
       
@@ -245,23 +241,30 @@ document.addEventListener('keydown', (event) => {
       
       const skidFactor = speed > 40 ? (Math.random() * 0.2 - 0.1) * (speed / 100) : 0;
       
-      vehicle.chassisBody.applyImpulse(
-          new CANNON.Vec3(0, tiltFactor * 12, -tiltFactor * 3), 
-          vehicle.chassisBody.position
-      );
+      if(test.engineRaceSound && test.engineRaceSound.isPlaying){
+        test.engineRaceSound.stop();
+      }
       
       if (speed > 30 && Math.abs(vehicle.chassisBody.velocity.x) > 2) {
-
-          test.SkidSound.play();
-          vehicle.chassisBody.applyImpulse(
-              new CANNON.Vec3(skidFactor * maxSkidForce, 0, skidFactor * maxSkidForce),
-              vehicle.chassisBody.position
-          );
+        
+        test.SkidSound.play();
+        vehicle.chassisBody.applyImpulse(
+          new CANNON.Vec3(skidFactor * maxSkidForce, 0, skidFactor * maxSkidForce),
+          vehicle.chassisBody.position
+        );
       }
       else if(speed > 2){
         test.engineBrakeSound.play();
       }
       
+      vehicle.chassisBody.applyImpulse(
+        new CANNON.Vec3(0, tiltFactor * 12, -tiltFactor * 3), 
+        vehicle.chassisBody.position
+      );
+      vehicle.setWheelForce(0, 0); // Front-left wheel
+      vehicle.setWheelForce(0, 1); // Front-right wheel
+      vehicle.setWheelForce(0, 2); // Rear-left wheel
+      vehicle.setWheelForce(0, 3); // Rear-right wheel
       vehicle.chassisBody.velocity.x *= brakeFactor;  
       vehicle.chassisBody.velocity.z *= brakeFactor;
       
@@ -273,7 +276,10 @@ document.addEventListener('keydown', (event) => {
 
     case 'Shift': // TURBO MODE
       turboActive = true;
-      headlights.forEach(light => (light.intensity = 50)); 
+      headlights.forEach(light => (light.intensity = 50));
+      if (test.NitroSound && !test.NitroSound.isPlaying){
+        test.NitroSound.play();
+      }
       setTimeout(() => {
           turboActive = false;
           headlights.forEach(light => (light.intensity = 20));
