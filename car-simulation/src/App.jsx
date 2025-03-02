@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
-import CannonDebugger from 'cannon-es-debugger';
 import SceneInit from './lib/SceneInit';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -67,9 +66,7 @@ function App() {
     var chassisModel=null
     const loader = new GLTFLoader();
     loader.load('/car-body/cybertruck.glb', (gltf) => {
-      chassisModel = gltf.scene;
-      console.log("model loaded");
-      
+      chassisModel = gltf.scene;      
       chassisModel.scale.set(3.5, 3.5, 3.5); 
       chassisModel.position.set(0, 0, 0);
       
@@ -123,21 +120,20 @@ function App() {
         position,
         axis: new CANNON.Vec3(1, 0, 0),
         direction: down,
-        suspensionStiffness: 150,
+        suspensionStiffness: 250,
         suspensionRestLength: 0.8,
         frictionSlip: 2,
         dampingRelaxation: 2.3,
         dampingCompression: 4.4,
-        maxSuspensionForce: 10000,
+        maxSuspensionForce: 1000,
         isFrontWheel: isSteeringWheel,
       });
       wheelBodies.push(wheelBody);
 
       loader.load('/car-body/wheel.gltf', (gltf) => {
         const wheelModel = gltf.scene;
-        console.log("Wheel loaded at:", position);
     
-        wheelModel.scale.set(4, 4, 4);
+        wheelModel.scale.set(3.5, 3.5, 3.5);
         wheelModel.position.copy(position);
 
         //Mirror wheels on the right side
@@ -178,13 +174,14 @@ document.addEventListener('keydown', (event) => {
       document.getElementById('engine-status').style.color = isEngineOn ? 'green' : 'red';
 
       if (isEngineOn) {
-        console.log("Engine started!");
         headlights.forEach(light => (light.intensity = 20));
         vehicle.chassisBody.applyForce(new CANNON.Vec3(150, 0, 0), vehicle.chassisBody.position);
         vehicle.chassisBody.velocity.set(0, 0, 0);
+        if (test.engineStartSound && !test.engineStartSound.isPlaying) {
+          test.engineStartSound.play();
+        }
       } 
       else {
-        console.log("Engine stopped!");
         headlights.forEach(light => (light.intensity = 0));
         vehicle.setWheelForce(0, 2);
         vehicle.setWheelForce(0, 3);
@@ -197,18 +194,24 @@ document.addEventListener('keydown', (event) => {
             vehicle.chassisBody.linearDamping = 0.3;
             accelerationForce = 400;
             vehicle.setWheelForce(accelerationForce, 2);
-          vehicle.setWheelForce(accelerationForce, 3);
+            if (test.engineRaceSound && !test.engineRaceSound.isPlaying) {
+              test.engineRaceSound.play();
+            }
+            vehicle.setWheelForce(accelerationForce, 3);
         }
       break;
       
       case 's':
-        case 'ArrowDown':
-          if (isEngineOn) {
-            vehicle.chassisBody.linearDamping = 0.3;
-            accelerationForce = -300;
-            vehicle.setWheelForce(accelerationForce, 2);
-        vehicle.setWheelForce(accelerationForce, 3);
-      }
+      case 'ArrowDown':
+        if (isEngineOn) {
+          vehicle.chassisBody.linearDamping = 0.3;
+          accelerationForce = -300;
+          vehicle.setWheelForce(accelerationForce, 2);
+          if (test.engineRaceSound && !test.engineRaceSound.isPlaying) {
+            test.engineRaceSound.play();
+          }
+          vehicle.setWheelForce(accelerationForce, 3);
+        }
       break;
 
     case 'a':
@@ -226,7 +229,6 @@ document.addEventListener('keydown', (event) => {
       break;
 
     case ' ':
-      console.log("Brakes applied!");
       vehicle.setWheelForce(0, 0); // Front-left wheel
       vehicle.setWheelForce(0, 1); // Front-right wheel
       vehicle.setWheelForce(0, 2); // Rear-left wheel
@@ -246,10 +248,15 @@ document.addEventListener('keydown', (event) => {
       );
       
       if (speed > 30 && Math.abs(vehicle.chassisBody.velocity.x) > 2) {
+
+          test.SkidSound.play();
           vehicle.chassisBody.applyImpulse(
               new CANNON.Vec3(skidFactor * maxSkidForce, 0, skidFactor * maxSkidForce),
               vehicle.chassisBody.position
           );
+      }
+      else if(speed > 2){
+        test.engineBrakeSound.play();
       }
       
       vehicle.chassisBody.velocity.x *= brakeFactor;  
@@ -263,11 +270,9 @@ document.addEventListener('keydown', (event) => {
 
     case 'Shift': // TURBO MODE
       turboActive = true;
-      console.log(" TURBO ACTIVATED!");
       headlights.forEach(light => (light.intensity = 50)); 
       setTimeout(() => {
           turboActive = false;
-          console.log(" Turbo Deactivated!");
           headlights.forEach(light => (light.intensity = 20));
       }, 6000); 
       break;
@@ -278,8 +283,14 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('keyup', (event) => {
   if (['w', 's', 'ArrowUp', 'ArrowDown',' '].includes(event.key)) {
     accelerationForce = 0;
+    test.engineRaceSound.stop();
     vehicle.setWheelForce(0, 2);
     vehicle.setWheelForce(0, 3);
+    vehicle.setSteeringValue(0, 0);
+    vehicle.setSteeringValue(0, 1);
+  }
+  else if (['a', 'd', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    steeringAngle = 0;
     vehicle.setSteeringValue(0, 0);
     vehicle.setSteeringValue(0, 1);
   }
@@ -294,8 +305,8 @@ const animate = () => {
     chassisModel.quaternion.copy(vehicle.chassisBody.quaternion);
   }
   if(wheelModels.length>0){
-    for (let i = 0; i < vehicle.wheelBodies.length; i++) {
-      const wheelBody = vehicle.wheelBodies[i];
+    for (let i = 0; i < wheelModels.length; i++) {
+      const wheelBody = wheelModels[i].body;
       const wheelModel = wheelModels[i].model; 
   
       if (wheelModel) {
@@ -326,7 +337,7 @@ const animate = () => {
   
   const velocity = vehicle.chassisBody.velocity;
   speed = Math.sqrt(velocity.x ** 2 + velocity.z ** 2) * 3.6;
-  document.getElementById('speedometer').textContent = `Speed: ${speed.toFixed(2)} km/h`;
+  document.getElementById('speedometer').textContent = `Speed: ${speed.toFixed(1)} km/h`;
   
   window.requestAnimationFrame(animate);
 };
@@ -334,6 +345,8 @@ const animate = () => {
 animate();
 
   }, [isEngineOn]);
+
+  
 
   return (
   <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>

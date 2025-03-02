@@ -8,7 +8,12 @@ export default class SceneInit {
     this.camera = undefined;
     this.renderer = undefined;
     this.freecamera=true;
-
+    this.bgMusic = undefined;
+    this.engineStartSound = undefined;
+    this.engineRaceSound = undefined;
+    this.engineBrakeSound = undefined;
+    this.SkidSound = undefined;
+    this.soundAttached = false;
     this.fov = 45;
     this.nearPlane = 1;
     this.farPlane = 1000;
@@ -32,7 +37,9 @@ export default class SceneInit {
     );
     this.camera.position.z = 24;
     this.camera.position.y = 8;
-
+     // Attach an audio listener to the camera
+     this.audioListener = new THREE.AudioListener();
+     this.camera.add(this.audioListener);
     const canvas = document.getElementById(this.canvasId);
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -50,14 +57,15 @@ export default class SceneInit {
     this.ambientLight = new THREE.AmbientLight(0x0a0a32, 0.2); 
     this.scene.add(this.ambientLight);
     
-    // Directional light (moonlight effect, dimmer)
-    this.directionalLight = new THREE.DirectionalLight(0xaaaaee, 0.3); 
-    this.directionalLight.position.set(0, 32, 64);
-    this.scene.add(this.directionalLight);
-
+  // Directional light (moonlight effect, dimmer)
+  this.directionalLight = new THREE.DirectionalLight(0xaaaaee, 0.3); 
+  this.directionalLight.position.set(0, 32, 64);
+  this.scene.add(this.directionalLight);
++
     // if window resizes
     window.addEventListener('resize', () => this.onWindowResize(), false);
-
+    this.addBackgroundMusic();
+    this.loadEngineSound();
   }
 
   //animating
@@ -76,14 +84,12 @@ export default class SceneInit {
       newCameraPosition.z += initialCameraOffset.z; 
       this.camera.position.lerp(newCameraPosition, 0.01);
 
-      // Make the camera look slightly ahead of the car
-      const lookAheadOffset = new THREE.Vector3(0, 2, 5); // Look slightly ahead
+      const lookAheadOffset = new THREE.Vector3(0, 2, 5); // (Height, distance ahead)
       const lookAtTarget = carPosition.clone().add(
           lookAheadOffset.applyQuaternion(this.carModel.quaternion)
       );
       this.camera.lookAt(lookAtTarget);
 
-      // Prevent camera from going too far or too close
       if (isNaN(this.camera.position.x) || isNaN(this.camera.position.y) || isNaN(this.camera.position.z)) {
           console.warn("Invalid camera position detected! Resetting...");
           this.camera.position.set(carPosition.x, carPosition.y + 5, carPosition.z + 10); // Reset position
@@ -92,7 +98,77 @@ export default class SceneInit {
     this.render();
     this.stats.update();
     this.controls.update();
+
   }
+
+  addBackgroundMusic() {
+    const listener = new THREE.AudioListener();
+    this.camera.add(listener);
+
+    this.bgMusic = new THREE.Audio(listener);
+    const audioLoader = new THREE.AudioLoader();
+
+    audioLoader.load('../../sounds/bgmusic.wav', (buffer) => {
+        this.bgMusic.setBuffer(buffer);
+        this.bgMusic.setLoop(true);  // Loop the music
+        this.bgMusic.setVolume(0.03); // Set volume
+        this.bgMusic.play();
+    });
+  }
+
+
+  loadEngineSound() {
+    const audioLoader = new THREE.AudioLoader();
+
+    this.engineStartSound = new THREE.PositionalAudio(this.audioListener);
+    audioLoader.load('../../sounds/enginestart.wav', (buffer) => {  // Load `.wav` file
+      this.engineStartSound.setBuffer(buffer);
+      this.engineStartSound.setLoop(false); // Loop engine sound
+      this.engineStartSound.setVolume(5.0); // Adjust volume
+      
+      this.attachSoundToCar(this.engineStartSound);  // Try attaching it to the car
+    });
+
+    this.engineRaceSound = new THREE.PositionalAudio(this.audioListener);
+    audioLoader.load('../../sounds/racing.wav', (buffer) => {  // Load `.wav` file
+        this.engineRaceSound.setBuffer(buffer);
+        this.engineRaceSound.setLoop(true); // Loop engine sound
+        this.engineRaceSound.setVolume(5.0); // Adjust volume
+
+        this.attachSoundToCar(this.engineRaceSound);  // Try attaching it to the car
+    });
+
+    this.engineBrakeSound = new THREE.PositionalAudio(this.audioListener);
+    audioLoader.load('../../sounds/braking.mp3', (buffer) => {  // Load `.wav` file
+        this.engineBrakeSound.setBuffer(buffer);
+        this.engineBrakeSound.setLoop(false); // Loop engine sound
+        this.engineBrakeSound.setVolume(4.5); // Adjust volume
+
+        this.attachSoundToCar(this.engineBrakeSound);  // Try attaching it to the car
+    });
+    
+    this.SkidSound = new THREE.PositionalAudio(this.audioListener);
+    audioLoader.load('../../sounds/skid.wav', (buffer) => {  // Load `.wav` file
+        this.SkidSound.setBuffer(buffer);
+        this.SkidSound.setLoop(false); // Loop engine sound
+        this.SkidSound.setVolume(3.5); // Adjust volume
+
+        this.attachSoundToCar(this.SkidSound);  // Try attaching it to the car
+    });
+
+  }
+
+  attachSoundToCar(Sound) {
+    if (this.carModel) {
+        this.carModel.add(Sound);
+
+        console.log("✅ Engine sound attached to car.");
+    } else{  // Keep retrying if not attached yet
+      console.warn("⏳ Waiting for chassisModel to load...");
+      setTimeout(() => this.attachSoundToCar(Sound), 500);
+    }
+  }
+
 
   render() {
 
